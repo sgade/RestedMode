@@ -1,6 +1,6 @@
 # RestedMode
 
-Play World of Warcraft: Forever at your desk or from the couch, without manual changes to your settings.
+Play World of Warcraft: Forever at the desk or from the couch, without fiddling with settings.
 
 RestedMode detects which screen WoW uses, and applies the settings for that mode: FPS limits, UI Scale, Gamepad UI and Edit Mode layout.
 

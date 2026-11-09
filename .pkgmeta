@@ -1,8 +1,8 @@
 package-as: RestedMode
 
 ignore:
+  - CODEOWNERS
   - README.md
-  - CLAUDE.md
 
 embedded-libraries:
   - libstub

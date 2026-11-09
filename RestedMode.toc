@@ -1,6 +1,6 @@
 ## Interface: 16001
 ## Title: RestedMode
-## Notes: Switches settings between playing at your desk and streaming to a TV
+## Notes: Play at the desk or from the couch, without fiddling with settings.
 ## Author: Kiaro-Frostwolf
 ## Version: @project-version@
 ## X-Category: Interface Enhancements
