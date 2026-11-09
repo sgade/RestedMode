@@ -1,0 +1,9 @@
+package-as: RestedMode
+
+ignore:
+  - README.md
+  - CLAUDE.md
+
+embedded-libraries:
+  - libstub
+  - ace3

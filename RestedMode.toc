@@ -1,0 +1,11 @@
+## Interface: 16001
+## Title: RestedMode
+## Notes: Switches settings between playing at your desk and streaming to a TV
+## Author: Kiaro-Frostwolf
+## Version: @project-version@
+## X-Category: Interface Enhancements
+## SavedVariables: RestedModeDB
+
+Libs\LibStub\LibStub.lua
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+RestedMode.lua
