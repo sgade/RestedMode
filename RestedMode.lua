@@ -15,8 +15,8 @@ local modePresets = {
 local STYLE = "InputDeviceInterfaceStyle"
 local PAD_EVENTS = { "GAME_PAD_CONNECTED", "GAME_PAD_DISCONNECTED", "GAME_PAD_ACTIVE_CHANGED" }
 local QUESTION = "RestedMode detected the %s screen. Switch to %s mode?"
-local PAD_HINT = "\n\nPush %s on the gamepad to confirm."
-local current, detected, pending, prompt
+local PAD_HINT = "\n\nPush %s on the gamepad to confirm or %s to cancel."
+local current, detected, pending, prompt, bound
 local applyToken = 0
 local f = CreateFrame("Frame")
 
@@ -179,28 +179,71 @@ no:SetScript("OnClick", function()
 end)
 dialog:SetScript("OnHide", function()
   prompt = nil
-  if not InCombatLockdown() then ClearOverrideBindings(f) end
+  if not InCombatLockdown() then
+    ClearOverrideBindings(f)
+    bound = false
+  end
 end)
 
--- The game gives the glyph for the connected controller, for example the A button of an Xbox controller.
-local function padGlyph()
-  local glyph = GetBindingText("PAD1")
-  if glyph and glyph:find("|A:", 1, true) then return (glyph:gsub(":%d+:%d+|a", ":16:16|a")) end
-  return "A"
+-- The same icon as on the buttons of the Blizzard dialogs. It changes when the active controller changes.
+local padIcons = {}
+local function addPadIcon(button, key)
+  if not (key and InputIconTextureMixin) then return end
+  local icon = CreateFrame("Frame", nil, button, "InputIconTextureFrameTemplate")
+  icon:SetInputKey(key)
+  local size = math.floor(button:GetHeight() * 0.8)
+  icon:SetSize(size, size)
+  icon:SetPoint("RIGHT", button:GetFontString(), "LEFT", -3, 0)
+  icon:Hide()
+  padIcons[#padIcons + 1] = icon
+end
+addPadIcon(yes, GAMEPAD_FACE_BOTTOM)
+addPadIcon(no, GAMEPAD_FACE_RIGHT)
+
+local function showPadIcons(shown)
+  for _, icon in ipairs(padIcons) do
+    local button = icon:GetParent()
+    local text = button:GetFontString()
+    icon:SetShown(shown)
+    text:ClearAllPoints()
+    text:SetPoint("CENTER", button, "CENTER", shown and (icon:GetWidth() + 3) / 2 or 0, 0)
+  end
+end
+
+-- The glyph of the active controller, for example the A button of an Xbox controller.
+local function padGlyph(key, fallback)
+  if not (key and InputIconTextureSetUtility) then return fallback end
+  local ok, atlas = pcall(InputIconTextureSetUtility.GetNormalActiveInputIconButtonTexture, key)
+  if ok and atlas then return CreateAtlasMarkup(atlas, 16, 16) end
+  return fallback
+end
+
+local function refreshDialog()
+  if not prompt then return end
+  local text = QUESTION:format(prompt, prompt)
+  if bound then
+    text = text .. PAD_HINT:format(padGlyph(GAMEPAD_FACE_BOTTOM, "A"), padGlyph(GAMEPAD_FACE_RIGHT, "B"))
+  end
+  showPadIcons(bound)
+  dialogText:SetText(text)
+  dialog:SetHeight(dialogText:GetStringHeight() + 70)
+end
+
+if InputDeviceIconSetManager then
+  InputDeviceIconSetManager:RegisterActiveInputDeviceIconSetUpdatedCallback(refreshDialog, dialog)
 end
 
 local function ask(mode)
   dialog:Hide()
   prompt = mode
-  local text = QUESTION:format(mode, mode)
   if not InCombatLockdown() then
     SetOverrideBindingClick(f, true, "PAD1", yes:GetName())
     SetOverrideBindingClick(f, true, "ENTER", yes:GetName())
+    SetOverrideBindingClick(f, true, "PAD2", no:GetName())
     SetOverrideBindingClick(f, true, "ESCAPE", no:GetName())
-    text = text .. PAD_HINT:format(padGlyph())
+    bound = true
   end
-  dialogText:SetText(text)
-  dialog:SetHeight(dialogText:GetStringHeight() + 70)
+  refreshDialog()
   dialog:Show()
 end
 
@@ -392,7 +435,7 @@ f:SetScript("OnEvent", function(self, e, arg)
 
   if tContains(PAD_EVENTS, e) then
     -- Show the glyph of the controller that is active now.
-    if prompt then ask(prompt) end
+    refreshDialog()
     return
   end
 
