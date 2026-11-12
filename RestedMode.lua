@@ -13,8 +13,11 @@ local modePresets = {
   couch = { { "Gamepad", LAYOUT_STYLE_GAMEPAD } },
 }
 local STYLE = "InputDeviceInterfaceStyle"
-local DIALOG = "RESTEDMODE_SWITCH_DESK"
-local current, detected, pending
+local PAD_EVENTS = { "GAME_PAD_CONNECTED", "GAME_PAD_DISCONNECTED", "GAME_PAD_ACTIVE_CHANGED" }
+local DIALOG = "RESTEDMODE_SWITCH"
+local QUESTION = "RestedMode detected the %s screen. Switch to %s mode?"
+local PAD_HINT = "\n\nPush %s on the gamepad to confirm."
+local current, detected, pending, prompt
 local applyToken = 0
 local f = CreateFrame("Frame")
 
@@ -109,6 +112,10 @@ local function summarize(mode, quiet)
   return lines
 end
 
+local function styleChanges(mode)
+  return not same(C_CVar.GetCVar(STYLE), cvarsFor(mode)[STYLE])
+end
+
 local function switch(mode, quiet)
   if InCombatLockdown() then
     log("switch to", mode, "deferred until combat ends")
@@ -128,7 +135,7 @@ local function switch(mode, quiet)
   current = mode
   pending = nil
 
-  if not same(C_CVar.GetCVar(STYLE), cvars[STYLE]) then
+  if styleChanges(mode) then
     RestedModeDB.summary = lines
     C_CVar.SetCVar(STYLE, cvars[STYLE])
     return
@@ -136,17 +143,49 @@ local function switch(mode, quiet)
   if p.layout ~= NO_LAYOUT then C_Timer.After(1, function() setLayout(p.layout) end) end
 end
 
+-- A change of the interface style needs a hardware event, so a click or a key press must start the switch.
+local confirm = CreateFrame("Button", "RestedModeConfirm")
+confirm:SetScript("OnClick", function()
+  local mode = prompt
+  StaticPopup_Hide(DIALOG)
+  if mode then switch(mode) end
+end)
+
 StaticPopupDialogs[DIALOG] = {
-  text = "RestedMode detected the desk screen. Switch to desk mode?",
+  text = "",
   button1 = YES,
   button2 = NO,
-  OnAccept = function() switch("desk") end,
-  OnCancel = function() switch("couch", true) end,
+  OnAccept = function(_, mode) switch(mode) end,
+  OnCancel = function() switch(current, true) end,
+  OnHide = function()
+    prompt = nil
+    if not InCombatLockdown() then ClearOverrideBindings(f) end
+  end,
+  enterClicksFirstButton = true,
   timeout = 0,
   whileDead = true,
   hideOnEscape = true,
   preferredIndex = 3,
 }
+
+-- The game gives the glyph for the connected controller, for example the A button of an Xbox controller.
+local function padGlyph()
+  local glyph = GetBindingText("PAD1")
+  if glyph and glyph:find("|A:", 1, true) then return (glyph:gsub(":%d+:%d+|a", ":16:16|a")) end
+  return "A"
+end
+
+local function ask(mode)
+  StaticPopup_Hide(DIALOG)
+  prompt = mode
+  local text = QUESTION:format(mode, mode)
+  if not InCombatLockdown() then
+    SetOverrideBindingClick(f, true, "PAD1", confirm:GetName())
+    text = text .. PAD_HINT:format(padGlyph())
+  end
+  StaticPopupDialogs[DIALOG].text = text
+  StaticPopup_Show(DIALOG, nil, nil, mode)
+end
 
 local function inferMode()
   return C_InputInterfaceStyle.GetCurrentStyle() == Enum.InputDeviceInterfaceType.Gamepad and "couch" or "desk"
@@ -182,10 +221,8 @@ local function detect()
 
   if mode == current or summary then
     switch(current, true)
-  elseif mode == "couch" then
-    switch("couch")
-  elseif mode == "desk" then
-    StaticPopup_Show(DIALOG)
+  elseif mode then
+    ask(mode)
   end
 end
 
@@ -323,6 +360,9 @@ end)
 
 f:RegisterEvent("ADDON_LOADED")
 f:RegisterEvent("PLAYER_ENTERING_WORLD")
+for _, e in ipairs(PAD_EVENTS) do
+  if not C_EventUtils or C_EventUtils.IsEventValid(e) then f:RegisterEvent(e) end
+end
 f:SetScript("OnEvent", function(self, e, arg)
   if e == "ADDON_LOADED" then
     if arg == ADDON then
@@ -333,10 +373,17 @@ f:SetScript("OnEvent", function(self, e, arg)
     return
   end
 
+  if tContains(PAD_EVENTS, e) then
+    -- Show the glyph of the controller that is active now.
+    if prompt then ask(prompt) end
+    return
+  end
+
   if e == "PLAYER_REGEN_ENABLED" then
     self:UnregisterEvent(e)
     C_Timer.After(1, function()
-      if pending then switch(pending, true) end
+      if not pending then return end
+      if styleChanges(pending) then ask(pending) else switch(pending, true) end
     end)
     return
   end

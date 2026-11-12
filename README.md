@@ -41,9 +41,11 @@ RestedMode starts detection after you enter the world.
 
 | Screen | Active mode | Result |
 | --- | --- | --- |
-| Not the desk screen | Desk | RestedMode applies couch mode at once |
+| Not the desk screen | Desk | A dialog asks if you want to switch to couch mode |
 | Desk screen | Couch | A dialog asks if you want to switch to desk mode |
 | Same as the active mode | | RestedMode corrects only the settings that are wrong |
+
+To confirm the dialog, click **Yes**, push Enter, or push **A** on the gamepad. The game lets an addon change the Gamepad UI only after a click or a key press.
 
 After a login or `/reload`, RestedMode finds the active mode from the Gamepad UI: on means couch, off means desk.
 
@@ -59,7 +61,7 @@ To turn off automatic switching, select **Forget** for **Forget desk screen** in
 | `/restedmode desk` | Shows the changes, then applies desk mode |
 | `/restedmode couch` | Shows the changes, then applies couch mode |
 
-RestedMode also shows the changes before each automatic change. In combat, RestedMode applies the switch when combat ends.
+RestedMode also shows the changes before each automatic change. In combat, RestedMode applies the switch when combat ends. If the switch changes the Gamepad UI, the dialog asks again when combat ends.
 
 A manual mode stays through loading screens. When the screen changes, the automatic rules above apply.
 
