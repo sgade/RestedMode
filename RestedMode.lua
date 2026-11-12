@@ -14,7 +14,6 @@ local modePresets = {
 }
 local STYLE = "InputDeviceInterfaceStyle"
 local PAD_EVENTS = { "GAME_PAD_CONNECTED", "GAME_PAD_DISCONNECTED", "GAME_PAD_ACTIVE_CHANGED" }
-local DIALOG = "RESTEDMODE_SWITCH"
 local QUESTION = "RestedMode detected the %s screen. Switch to %s mode?"
 local PAD_HINT = "\n\nPush %s on the gamepad to confirm."
 local current, detected, pending, prompt
@@ -144,29 +143,44 @@ local function switch(mode, quiet)
 end
 
 -- A change of the interface style needs a hardware event, so a click or a key press must start the switch.
-local confirm = CreateFrame("Button", "RestedModeConfirm")
-confirm:SetScript("OnClick", function()
+-- Do not use StaticPopup: it taints the gamepad UI and the game then blocks Blizzard actions.
+local dialog = CreateFrame("Frame", "RestedModeDialog", UIParent)
+dialog:SetSize(320, 100)
+dialog:SetPoint("TOP", UIParent, "TOP", 0, -135)
+dialog:SetFrameStrata("DIALOG")
+dialog:SetToplevel(true)
+dialog:EnableMouse(true)
+dialog:Hide()
+CreateFrame("Frame", nil, dialog, "DialogBorderTemplate")
+
+local dialogText = dialog:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+dialogText:SetPoint("TOP", 0, -16)
+dialogText:SetWidth(290)
+
+local function dialogButton(name, text, anchor, x)
+  local button = CreateFrame("Button", name, dialog, "UIPanelButtonTemplate")
+  button:SetSize(128, 22)
+  button:SetPoint(anchor, dialog, "BOTTOM", x, 16)
+  button:SetText(text)
+  return button
+end
+
+local yes = dialogButton("RestedModeDialogYes", YES, "BOTTOMRIGHT", -6)
+local no = dialogButton("RestedModeDialogNo", NO, "BOTTOMLEFT", 6)
+
+yes:SetScript("OnClick", function()
   local mode = prompt
-  StaticPopup_Hide(DIALOG)
+  dialog:Hide()
   if mode then switch(mode) end
 end)
-
-StaticPopupDialogs[DIALOG] = {
-  text = "",
-  button1 = YES,
-  button2 = NO,
-  OnAccept = function(_, mode) switch(mode) end,
-  OnCancel = function() switch(current, true) end,
-  OnHide = function()
-    prompt = nil
-    if not InCombatLockdown() then ClearOverrideBindings(f) end
-  end,
-  enterClicksFirstButton = true,
-  timeout = 0,
-  whileDead = true,
-  hideOnEscape = true,
-  preferredIndex = 3,
-}
+no:SetScript("OnClick", function()
+  dialog:Hide()
+  switch(current, true)
+end)
+dialog:SetScript("OnHide", function()
+  prompt = nil
+  if not InCombatLockdown() then ClearOverrideBindings(f) end
+end)
 
 -- The game gives the glyph for the connected controller, for example the A button of an Xbox controller.
 local function padGlyph()
@@ -176,15 +190,18 @@ local function padGlyph()
 end
 
 local function ask(mode)
-  StaticPopup_Hide(DIALOG)
+  dialog:Hide()
   prompt = mode
   local text = QUESTION:format(mode, mode)
   if not InCombatLockdown() then
-    SetOverrideBindingClick(f, true, "PAD1", confirm:GetName())
+    SetOverrideBindingClick(f, true, "PAD1", yes:GetName())
+    SetOverrideBindingClick(f, true, "ENTER", yes:GetName())
+    SetOverrideBindingClick(f, true, "ESCAPE", no:GetName())
     text = text .. PAD_HINT:format(padGlyph())
   end
-  StaticPopupDialogs[DIALOG].text = text
-  StaticPopup_Show(DIALOG, nil, nil, mode)
+  dialogText:SetText(text)
+  dialog:SetHeight(dialogText:GetStringHeight() + 70)
+  dialog:Show()
 end
 
 local function inferMode()
@@ -213,7 +230,7 @@ local function detect()
   local summary = RestedModeDB.summary
   RestedModeDB.summary = nil
   current = current or inferMode()
-  StaticPopup_Hide(DIALOG)
+  dialog:Hide()
 
   if summary then
     for _, line in ipairs(summary) do log(line) end
@@ -237,7 +254,7 @@ end
 local function forgetDeskScreen()
   RestedModeDB.deskScreen = nil
   detected = nil
-  StaticPopup_Hide(DIALOG)
+  dialog:Hide()
   log("automatic switching is off")
 end
 
@@ -351,7 +368,7 @@ console:RegisterChatCommand("restedmode", function(input)
   if not arg then
     status()
   elseif defaults[arg:lower()] then
-    StaticPopup_Hide(DIALOG)
+    dialog:Hide()
     switch(arg:lower())
   else
     log("usage: /restedmode [desk|couch]")
