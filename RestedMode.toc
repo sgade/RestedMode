@@ -4,6 +4,7 @@
 ## Author: Kiaro-Frostwolf
 ## Version: @project-version@
 ## X-Category: Interface Enhancements
+## IconTexture: Interface\AddOns\RestedMode\Media\Icon
 ## SavedVariables: RestedModeDB
 
 Libs\LibStub\LibStub.lua

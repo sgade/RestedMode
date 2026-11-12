@@ -3,6 +3,8 @@ package-as: RestedMode
 ignore:
   - CODEOWNERS
   - README.md
+  - Media/Icon.svg
+  - Media/Icon.png
 
 embedded-libraries:
   - libstub
