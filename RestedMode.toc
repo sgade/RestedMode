@@ -3,9 +3,13 @@
 ## Notes: Play at the desk or from the couch, without fiddling with settings.
 ## Author: Kiaro-Frostwolf
 ## Version: @project-version@
+## Category: Interface Enhancements
 ## X-Category: Interface Enhancements
 ## IconTexture: Interface\AddOns\RestedMode\Media\Icon
 ## SavedVariables: RestedModeDB
+## X-Curse-Project-ID: 1800989
+## X-License: GPL-3.0
+## X-Website: https://github.com/sgade/RestedMode
 
 Libs\LibStub\LibStub.lua
 Libs\AceConsole-3.0\AceConsole-3.0.xml

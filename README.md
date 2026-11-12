@@ -20,7 +20,9 @@ RestedMode always uses the Gamepad UI in couch mode, and the keyboard and mouse 
 
 ## Install
 
-Extract the ZIP file from GitHub Releases to `World of Warcraft/_forever_/Interface/AddOns/`.
+Install RestedMode from CurseForge: in the CurseForge app, search for RestedMode.
+
+As an alternative, extract the ZIP file from GitHub Releases to `World of Warcraft/_forever_/Interface/AddOns/`.
 
 To install from the source, copy this repository folder to the same location. The name of the folder in `AddOns` must be `RestedMode`.
 
